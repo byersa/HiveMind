@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        standalone="true"
+        require-authentication="false">
+    <!-- NOTE: require-authentication=false is required to allow sub-screens to decide, and because the Login screen is below this. -->
+    <always-actions>
+        <!-- No JS or CSS files referenced here, just setup lists for subscreens to add to in pre-actions -->
+        <set field="html_scripts" from="new LinkedHashSet()"/>
+        <set field="footer_scripts" from="new LinkedHashSet()"/>
+
+        <!-- See WebrootThemeData.xml for CSS references -->
+        <set field="html_stylesheets" from="new LinkedHashSet()"/>
+        <set field="capture_radius" value="50"/>
+    </always-actions>
+
+      <transition name="insertPt" read-only="true" require-session-token="false">
+        <actions>
+            <script>
+                import org.moqui.impl.entity.*
+		import java.sql.*
+
+		Connection conn = ec.entity.getConnection("transactional")
+		conn.setAutoCommit(true)
+                logger.info("in insertPt, ec.web.parameters: ${ec.web.parameters}")
+                logger.info("in insertPt, context: ${context}")
+		//EntityDefinition ed = ec.entity.getEntityDefinition("AimDigitize")
+		//EntityDefinition ed = ec.entity.getEntityDefinition("AimDigitize")
+		//logger.info("in insertPt, ed: ${ed}")
+		//EntityQueryBuilder eqb = new EntityQueryBuilder(ed, ec)
+		//logger.info("in insertPt, eqb: ${eqb}")
+		String sql = "insert into aim_digitize (latitude, longitude, geom) values(?, ?, ST_SetSRID(ST_Point(?, ?), 4326))"
+		//String sql = "insert into qgis.aim_digitize (latitude, longitude, geom) values(latitude, longitude, ST_SetSRID(ST_Point(%s ::double precision,%s ::double precision), 4326)' % (longitude,latitude))"
+		logger.info("in insertPt, sql: ${sql}")
+		ResultSet rsKey, rsRec
+		Map result = new HashMap()
+                try {
+		    PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+		    ps.setObject(1, latitude, java.sql.Types.DOUBLE)
+		    ps.setObject(2, longitude, java.sql.Types.DOUBLE)
+		    ps.setObject(3, latitude, java.sql.Types.DOUBLE)
+		    ps.setObject(4, longitude, java.sql.Types.DOUBLE)
+                    final int rows = ps.executeUpdate();
+                    logger.info("Executed update with SQL [" + sql +
+                    "[" + rows + "] rows");
+		    rsKey = ps.getGeneratedKeys();
+
+                    Long insertKey = null;
+
+                    if(rsKey.next()) {
+                        insertKey = rsKey.getLong(1);
+                    }
+		    rsKey.close()
+		    logger.info("in insertPt, insertKey: ${insertKey}")
+		    String sqlq = "select * from aim_digitize where id = ?"
+		    logger.info("in insertPt, sqlq: ${sqlq}")
+		    PreparedStatement psq = conn.prepareStatement(sqlq)
+		    logger.info("in insertPt, psq: ${psq}")
+		    psq.setObject(1, insertKey, java.sql.Types.INTEGER)
+		    logger.info("in insertPt(2), psq: ${psq}")
+		    rsRec = psq.executeQuery()
+		    logger.info("in insertPt, rsRec: ${rsRec}")
+		    Long id
+		    Double lat, lng
+                    if(rsRec.next()) {
+                        result.id = rsRec.getLong('id');
+                        result.lat = rsRec.getDouble('latitude');
+                        result.lng = rsRec.getDouble('longitude');
+                    }
+		    logger.info("in insertPt, result: ${result}")
+		    rsRec.close()
+		    psq.close()
+		    ps.close()
+                } catch (SQLException sqle) {
+                     logger.warn("Error in JDBC update for SQL " + sqle.getMessage());
+                } finally {
+                }
+
+		logger.info("in insertPt, result(2): ${result}")
+		ec.web.sendJsonResponse(result)
+            </script>
+	</actions>
+	<default-response type="none"/>
+      </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="html" >
+                <![CDATA[
+
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Geo Editor</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="leaflet/leaflet.css">
+<style>
+#mapid {
+    height: 400px;
+}
+</style>
+<script src="leaflet/leaflet.js">
+</script>
+<script>
+	console.log("in geoed");
+</script>
+    </head>
+    <body class="ofnan">
+HIveMindGis
+        <div id="mapid"></div>
+	<script>
+
+		const host = "http://73.63.14.200:8080";
+	var mymap = L.map('mapid').setView([36.205, -86.59], 10);
+
+	L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox.streets-satellite'
+	}).addTo(mymap);
+	/*
+	L.tileLayer('https://api.tiles.mapbox.com/v4/mapbox.mapbox-streets-v8/10/-86.5/36.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+	L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+			'<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox.streets'
+	}).addTo(mymap);
+	*/
+
+	mymap.on('click', function(evt) {
+	    console.log("click: " + evt.latlng);
+	    var url = host + "/HiveMindGis/geoed/insertPt?latitude=" + evt.latlng.lat + "&longitude=" + evt.latlng.lng;
+	    var data = {
+	        "latitude": evt.latlng.lat,
+	        "longitude": evt.latlng.lng
+		};
+            var params = {
+		headers: {
+		    "content-type":"application-json; charset=UTF-8"
+		    },
+		method: "GET"
+	    };
+	    var result = fetch(url, params);
+	    result.then((response) => {
+	        return response.json();
+	    })
+	    .then((d) => {
+	        console.log("fetch then d: " + d);
+		txt = ""
+		for (var x in d){
+                   txt += x + ": " + d[x] + ", ";
+                }
+	        console.log("fetch then response: " + txt);
+	        var circle = L.circle(evt.latlng, {
+                  color: "red",
+                  fillColor: "#f03",
+                  fillOpacity: 0.5,
+                  radius: 50.0
+                  }).addTo(mymap);
+            }).catch((err) => {
+	        console.log(`fetch catch err: {err}`);
+	    });
+
+	});
+        </script>
+    </body>
+</html>
+]]>
+            </text>
+        </render-mode>
+
+    </widgets>
+</screen>
+

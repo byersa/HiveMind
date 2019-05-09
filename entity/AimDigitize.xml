@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-2.1.xsd">
+  <entity entity-name="AimDigitize" package="com.automationgroups">
+    <field name="id" type="id" is-pk="true"/>
+    <field name="longitude" type="text-short"/>
+    <field name="latitude" type="text-short"/>
+    <field name="streetX" type="text-short"/>
+    <field name="streetY" type="text-short"/>
+    <field name="postalCode" type="text-short"/>
+    <field name="city" type="text-short"/>
+    <field name="standardStatus" type="text-short"/>
+    <field name="standardMode" type="text-short"/>
+    <field name="enteredBy" type="text-short"/>
+    <field name="enteredOn" type="date-time"/>
+    <field name="modifiedBy" type="text-short"/>
+    <field name="modifiedOn" type="date-time"/>
+    <field name="reviewedBy" type="text-short"/>
+    <field name="reviewedOn" type="date-time"/>
+    <field name="geom" type="geometry"/>
+
+  </entity>
+</entities>
+
